@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Career Comeback Dashboard</title>
+  <style>
+    :root { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { margin: 0; background: #0b1020; color: #ecf2ff; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px 40px; }
+    h1 { margin: 0 0 8px; }
+    .muted { color: #9cb0d9; margin-bottom: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
+    .card { background: #121a31; border: 1px solid #223059; border-radius: 12px; padding: 14px; }
+    .span-8 { grid-column: span 8; }
+    .span-4 { grid-column: span 4; }
+    .span-12 { grid-column: span 12; }
+    @media (max-width: 900px) { .span-8, .span-4 { grid-column: span 12; } }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #223059; padding: 8px; text-align: left; font-size: 14px; }
+    th { color: #9cb0d9; font-weight: 600; }
+    input[type='number'], input[type='text'] {
+      width: 100%; box-sizing: border-box; background: #0d1530; color: #ecf2ff;
+      border: 1px solid #2a3b6e; border-radius: 8px; padding: 8px;
+    }
+    .progress { background: #0d1530; border-radius: 999px; overflow: hidden; height: 12px; border: 1px solid #2a3b6e; }
+    .bar { height: 100%; background: linear-gradient(90deg, #22d3ee, #4ade80); width: 0%; }
+    .kpi { font-size: 32px; font-weight: 700; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+    button { background: #3451ff; color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+    button.secondary { background: #223059; }
+    ul { padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Career Comeback & Graduation Dashboard</h1>
+    <div class="muted">Hedeflerini gerçek bir KPI paneli gibi takip etmek için tek sayfa dashboard (API + local fallback).</div>
+
+    <div class="grid">
+      <section class="card span-8">
+        <h2>KPI Dashboard</h2>
+        <table id="kpi-table">
+          <thead>
+            <tr>
+              <th>Hedef</th>
+              <th>Güncel</th>
+              <th>Hedef</th>
+              <th>İlerleme</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="card span-4">
+        <h2>Haftalık Snapshot</h2>
+        <div class="row"><div>Toplam Hedef İlerlemesi</div></div>
+        <div class="kpi" id="overall">0%</div>
+        <div class="progress"><div class="bar" id="overall-bar"></div></div>
+
+        <div class="row" style="margin-top:14px;"><label>Haftalık Başvuru (hedef: 7)</label></div>
+        <input type="number" id="weekly-apps" min="0" value="0" />
+
+        <div class="row"><label>Bu hafta SQL soru adedi</label></div>
+        <input type="number" id="weekly-sql" min="0" value="0" />
+
+        <div class="row"><label>Bu hafta yeni bağlantı</label></div>
+        <input type="number" id="weekly-network" min="0" value="0" />
+      </section>
+
+      <section class="card span-12">
+        <h2>Sprint 1: Launch (1–7 Mart)</h2>
+        <div id="tasks"></div>
+        <div class="row">
+          <button id="save">Kaydet</button>
+          <button class="secondary" id="reset">Sıfırla</button>
+        </div>
+      </section>
+
+      <section class="card span-12">
+        <h2>Cuma Review</h2>
+        <ul>
+          <li>Başvuru: <strong id="r-app">0/7</strong></li>
+          <li>SQL: <strong id="r-sql">0 soru</strong></li>
+          <li>Networking: <strong id="r-net">0 bağlantı</strong></li>
+          <li>Tamamlanan Sprint Görevi: <strong id="r-done">0/5</strong></li>
+        </ul>
+      </section>
+
+      <section class="card span-12">
+        <h2>AI Kariyer Koçu (API)</h2>
+        <div class="row">
+          <button id="coach">AI Öneri Üret</button>
+        </div>
+        <div id="coach-output" class="muted">Henüz öneri üretilmedi.</div>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    const goals = [
+      ["SQL Mastery", 1],
+      ["Veri Portfolyosu", 3],
+      ["Product Sense", 10],
+      ["Networking", 10],
+      ["Informational Interview", 3],
+      ["LinkedIn & CV", 100],
+      ["Başvurular (haftalık)", 7],
+      ["Mülakat Hazırlığı", 5],
+      ["Dijital Arşiv", 100],
+      ["Akademik Referans", 3],
+      ["Bucket List", 10]
+    ];
+
+    const sprintTasks = [
+      "KPI dashboard baseline değerlerini gir",
+      "LinkedIn/CV revizyonunu tamamla",
+      "Window Functions + Subqueries çalışma planı yap",
+      "20 ilanlık pipeline + 7 başvuru yap",
+      "5 bağlantı mesajı + 1 interview daveti gönder"
+    ];
+
+    async function loadState() {
+      try {
+        const response = await fetch("/api/state", { cache: "no-store" });
+        if (!response.ok) throw new Error("api_unavailable");
+        return await response.json();
+      } catch (_) {
+        return JSON.parse(localStorage.getItem("careerDashboard") || "{}");
+      }
+    }
+
+    async function saveState(state) {
+      localStorage.setItem("careerDashboard", JSON.stringify(state));
+      try {
+        await fetch("/api/state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(state),
+        });
+      } catch (_) {
+        // API yoksa localStorage fallback devam eder.
+      }
+    }
+
+    async function render() {
+      const state = await loadState();
+      const tbody = document.querySelector("#kpi-table tbody");
+      tbody.innerHTML = "";
+
+      let total = 0;
+      goals.forEach((g, i) => {
+        const current = Number(state[`g${i}`] || 0);
+        const target = g[1];
+        const pct = Math.max(0, Math.min(100, Math.round((current / target) * 100)));
+        total += pct;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${g[0]}</td>
+          <td><input type="number" min="0" value="${current}" data-key="g${i}"/></td>
+          <td>${target}</td>
+          <td>
+            <div class="progress"><div class="bar" style="width:${pct}%"></div></div>
+            <small>${pct}%</small>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      const avg = Math.round(total / goals.length);
+      document.getElementById("overall").textContent = `${avg}%`;
+      document.getElementById("overall-bar").style.width = `${avg}%`;
+
+      document.getElementById("weekly-apps").value = state.weeklyApps || 0;
+      document.getElementById("weekly-sql").value = state.weeklySql || 0;
+      document.getElementById("weekly-network").value = state.weeklyNetwork || 0;
+
+      const tasks = document.getElementById("tasks");
+      tasks.innerHTML = sprintTasks.map((t, i) => {
+        const checked = state[`t${i}`] ? "checked" : "";
+        return `<label class="row"><input type="checkbox" data-task="t${i}" ${checked}/> ${t}</label>`;
+      }).join("");
+
+      const done = sprintTasks.filter((_, i) => state[`t${i}`]).length;
+      document.getElementById("r-app").textContent = `${state.weeklyApps || 0}/7`;
+      document.getElementById("r-sql").textContent = `${state.weeklySql || 0} soru`;
+      document.getElementById("r-net").textContent = `${state.weeklyNetwork || 0} bağlantı`;
+      document.getElementById("r-done").textContent = `${done}/5`;
+    }
+
+    async function collectAndSave() {
+      const state = await loadState();
+      document.querySelectorAll("input[data-key]").forEach(i => state[i.dataset.key] = Number(i.value || 0));
+      document.querySelectorAll("input[data-task]").forEach(i => state[i.dataset.task] = i.checked);
+      state.weeklyApps = Number(document.getElementById("weekly-apps").value || 0);
+      state.weeklySql = Number(document.getElementById("weekly-sql").value || 0);
+      state.weeklyNetwork = Number(document.getElementById("weekly-network").value || 0);
+      await saveState(state);
+      render();
+    }
+
+
+    async function fetchCoachAdvice() {
+      const output = document.getElementById("coach-output");
+      output.textContent = "Öneriler hazırlanıyor...";
+      const state = await loadState();
+      try {
+        const response = await fetch("/api/coach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          output.textContent = `Hata: ${data.error || "coach_error"}`;
+          return;
+        }
+        output.textContent = data.advice || "Öneri üretilemedi.";
+      } catch (_) {
+        output.textContent = "Coach API erişilemedi.";
+      }
+    }
+
+    document.addEventListener("input", (e) => {
+      if (e.target.matches("input")) collectAndSave();
+    });
+
+    document.getElementById("save").addEventListener("click", collectAndSave);
+    document.getElementById("coach").addEventListener("click", fetchCoachAdvice);
+    document.getElementById("reset").addEventListener("click", async () => {
+      localStorage.removeItem("careerDashboard");
+      await saveState({});
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
