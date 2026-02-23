@@ -70,8 +70,10 @@ Sistemi kişiselleştirmek için aşağıdaki bilgileri topla:
 
 ## Canlı Dashboard (Direkt Kullanım)
 - Bu repo içinde hazır bir panel var: `dashboard.html`
-- Açmak için: `python -m http.server 8000` → `http://localhost:8000/dashboard.html`
-- Değerler tarayıcıda otomatik kaydedilir (localStorage).
+- API ile açmak için: `python api_server.py` → `http://localhost:8000/dashboard.html`
+- API endpointleri: `/api/health`, `/api/state`
+- Dashboard verileri kalıcı olarak `dashboard_state.json` dosyasına yazılır.
+- API yoksa localStorage fallback otomatik devreye girer.
 
 ## Hızlı Başlat (Bugün Başlamak için 20 Dakika)
 1. **Dakika 0–5:** Intake bölümündeki 10 soruyu tek bir not sayfasında cevapla.

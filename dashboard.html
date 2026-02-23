@@ -35,7 +35,7 @@
 <body>
   <div class="wrap">
     <h1>Career Comeback & Graduation Dashboard</h1>
-    <div class="muted">Hedeflerini gerçek bir KPI paneli gibi takip etmek için tek sayfa dashboard.</div>
+    <div class="muted">Hedeflerini gerçek bir KPI paneli gibi takip etmek için tek sayfa dashboard (API + local fallback).</div>
 
     <div class="grid">
       <section class="card span-8">
@@ -113,16 +113,31 @@
       "5 bağlantı mesajı + 1 interview daveti gönder"
     ];
 
-    function loadState() {
-      return JSON.parse(localStorage.getItem("careerDashboard") || "{}");
+    async function loadState() {
+      try {
+        const response = await fetch("/api/state", { cache: "no-store" });
+        if (!response.ok) throw new Error("api_unavailable");
+        return await response.json();
+      } catch (_) {
+        return JSON.parse(localStorage.getItem("careerDashboard") || "{}");
+      }
     }
 
-    function saveState(state) {
+    async function saveState(state) {
       localStorage.setItem("careerDashboard", JSON.stringify(state));
+      try {
+        await fetch("/api/state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(state),
+        });
+      } catch (_) {
+        // API yoksa localStorage fallback devam eder.
+      }
     }
 
-    function render() {
-      const state = loadState();
+    async function render() {
+      const state = await loadState();
       const tbody = document.querySelector("#kpi-table tbody");
       tbody.innerHTML = "";
 
@@ -166,14 +181,14 @@
       document.getElementById("r-done").textContent = `${done}/5`;
     }
 
-    function collectAndSave() {
-      const state = loadState();
+    async function collectAndSave() {
+      const state = await loadState();
       document.querySelectorAll("input[data-key]").forEach(i => state[i.dataset.key] = Number(i.value || 0));
       document.querySelectorAll("input[data-task]").forEach(i => state[i.dataset.task] = i.checked);
       state.weeklyApps = Number(document.getElementById("weekly-apps").value || 0);
       state.weeklySql = Number(document.getElementById("weekly-sql").value || 0);
       state.weeklyNetwork = Number(document.getElementById("weekly-network").value || 0);
-      saveState(state);
+      await saveState(state);
       render();
     }
 
@@ -182,8 +197,9 @@
     });
 
     document.getElementById("save").addEventListener("click", collectAndSave);
-    document.getElementById("reset").addEventListener("click", () => {
+    document.getElementById("reset").addEventListener("click", async () => {
       localStorage.removeItem("careerDashboard");
+      await saveState({});
       render();
     });
 
