@@ -72,6 +72,7 @@ Sistemi kişiselleştirmek için aşağıdaki bilgileri topla:
 - Bu repo içinde hazır bir panel var: `dashboard.html`
 - API ile açmak için: `python api_server.py` → `http://localhost:8000/dashboard.html`
 - API endpointleri: `/api/health`, `/api/state`
+- AI öneri endpointi: `/api/coach` (OPENAI_API_KEY gerekir).
 - Dashboard verileri kalıcı olarak `dashboard_state.json` dosyasına yazılır.
 - API yoksa localStorage fallback otomatik devreye girer.
 

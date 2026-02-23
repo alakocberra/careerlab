@@ -1,31 +1,30 @@
 # careerlab
 
-Bu repo artık doğrudan kullanabileceğin bir dashboard içerir ve **API ile veri kaydı** destekler.
+Bu repo doğrudan kullanabileceğin bir dashboard içerir ve API ile veri kaydı + AI koç önerisi destekler.
 
 ## API ile Çalıştırma (önerilen)
 1. Terminalde repo klasörüne gir:
    - `cd /workspace/careerlab`
-2. Dashboard + API server'ı başlat:
+2. OpenAI anahtarını ortam değişkeni olarak ayarla:
+   - `export OPENAI_API_KEY='YOUR_KEY_HERE'`
+3. Dashboard + API server'ı başlat:
    - `python api_server.py`
-3. Tarayıcıdan aç:
+4. Tarayıcıdan aç:
    - `http://localhost:8000/dashboard.html`
-4. API kontrolü:
-   - `http://localhost:8000/api/health`
-   - `http://localhost:8000/api/state`
+
+## Endpointler
+- `GET /api/health`
+- `GET /api/state`
+- `POST /api/state`
+- `POST /api/coach` (dashboard durumuna göre AI aksiyon önerisi üretir)
 
 > Dashboard'a girdiğin veriler `dashboard_state.json` dosyasına yazılır.
 
-## Sadece statik çalıştırma (fallback)
-- `python -m http.server 8000`
-- `http://localhost:8000/dashboard.html`
-- Bu modda veriler localStorage'da tutulur.
-
 ## Ne Göreceksin?
-- 10 SMART hedef için canlı KPI tablosu (Güncel/Hedef/%).
+- 10 SMART hedef için canlı KPI tablosu.
 - Toplam ilerleme yüzdesi.
-- Haftalık snapshot (başvuru, SQL soru, networking).
-- Sprint 1 görev checklist'i.
-- Cuma review özeti (otomatik hesaplanır).
+- Haftalık snapshot + Cuma review.
+- "AI Öneri Üret" butonu ile kişisel aksiyon önerisi.
 
 ## Ek Doküman
 - Sistem detayları: `career_comeback_system.md`

@@ -87,6 +87,15 @@
           <li>Tamamlanan Sprint Görevi: <strong id="r-done">0/5</strong></li>
         </ul>
       </section>
+
+      <section class="card span-12">
+        <h2>AI Kariyer Koçu (API)</h2>
+        <div class="row">
+          <button id="coach">AI Öneri Üret</button>
+        </div>
+        <div id="coach-output" class="muted">Henüz öneri üretilmedi.</div>
+      </section>
+
     </div>
   </div>
 
@@ -192,11 +201,34 @@
       render();
     }
 
+
+    async function fetchCoachAdvice() {
+      const output = document.getElementById("coach-output");
+      output.textContent = "Öneriler hazırlanıyor...";
+      const state = await loadState();
+      try {
+        const response = await fetch("/api/coach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          output.textContent = `Hata: ${data.error || "coach_error"}`;
+          return;
+        }
+        output.textContent = data.advice || "Öneri üretilemedi.";
+      } catch (_) {
+        output.textContent = "Coach API erişilemedi.";
+      }
+    }
+
     document.addEventListener("input", (e) => {
       if (e.target.matches("input")) collectAndSave();
     });
 
     document.getElementById("save").addEventListener("click", collectAndSave);
+    document.getElementById("coach").addEventListener("click", fetchCoachAdvice);
     document.getElementById("reset").addEventListener("click", async () => {
       localStorage.removeItem("careerDashboard");
       await saveState({});
